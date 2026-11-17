@@ -1,0 +1,43 @@
+name: Build Zona de Prueba APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '**'
+      - '.github/workflows/android-apk.yml'
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.1'
+      - name: Godot import and script check
+        run: |
+          godot --headless --editor --path . --import --quit
+          godot --headless --editor --path . --quit
+      - name: Smoke test scene
+        run: timeout 45s godot --headless --path . --quit-after 8 --verbose 2>&1 | tee smoke.log
+      - name: Export APK
+        run: |
+          mkdir -p build
+          godot --headless --path . --export-debug 'Android' build/ZonaDePrueba.apk
+          test -s build/ZonaDePrueba.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZonaDePrueba-Android-APK
+          path: build/ZonaDePrueba.apk
+          retention-days: 30
