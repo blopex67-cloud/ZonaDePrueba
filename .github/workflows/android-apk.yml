@@ -35,6 +35,8 @@ jobs:
         run: godot --headless --editor --path . --import --quit
       - name: Validate imported 3D assets
         run: godot --headless --path . --script res://scripts/asset_check.gd
+      - name: Validate ragdoll physics setup
+        run: godot --headless --path . --script res://scripts/ragdoll_check.gd
       - name: Smoke test scene
         run: |
           set -o pipefail

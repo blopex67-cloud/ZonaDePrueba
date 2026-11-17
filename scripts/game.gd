@@ -29,6 +29,10 @@ var step_player: AudioStreamPlayer
 var gun_model: Node3D
 var weapon_animation_player: AnimationPlayer
 var target_body: StaticBody3D
+var target_skeleton: Skeleton3D
+var target_anim_player: AnimationPlayer
+var ragdoll_simulator: PhysicalBoneSimulator3D
+var ragdoll_bones: Array[PhysicalBone3D] = []
 var footstep_time := 0.0
 var rng := RandomNumberGenerator.new()
 
@@ -130,8 +134,9 @@ func _build_player() -> void:
 		return
 	gun_model = weapon_scene.instantiate()
 	gun_model.name = "AK74M_ArmasFPS"
-	gun_model.scale = Vector3.ONE * 0.01
-	gun_model.position = Vector3(0.12,-0.20,-0.38)
+	gun_model.scale = Vector3.ONE * 0.035
+	gun_model.position = Vector3(0.38,-0.38,-0.72)
+	gun_model.rotation_degrees = Vector3(0.0,0.0,0.0)
 	camera.add_child(gun_model)
 	weapon_animation_player = gun_model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if weapon_animation_player:
@@ -149,7 +154,7 @@ func _build_player() -> void:
 func _build_target() -> void:
 	target = Node3D.new()
 	target.name = "ObjetivoDePrueba"
-	target.position = Vector3(0,0,-12)
+	target.position = Vector3(0,0,-5)
 	target.rotation.y = PI
 	add_child(target)
 	# Personaje 3D original, riggeado y texturizado, recibido en el ZIP del usuario.
@@ -159,17 +164,20 @@ func _build_target() -> void:
 		return
 	var soldier := soldier_scene.instantiate()
 	soldier.name = "SoldadoRiggeado"
-	soldier.scale = Vector3.ONE * 0.01
+	soldier.scale = Vector3.ONE * 0.013
 	target.add_child(soldier)
 	# Postura de guardia: bajar brazos del T-pose importado, sin patrulla ni alarma.
-	var skeleton := soldier.find_child("Skeleton3D", true, false) as Skeleton3D
-	if skeleton:
-		var left_shoulder := skeleton.find_bone("swat:LeftShoulder_011")
-		var right_shoulder := skeleton.find_bone("swat:RightShoulder_036")
+	target_skeleton = soldier.find_child("Skeleton3D", true, false) as Skeleton3D
+	target_anim_player = soldier.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if target_skeleton:
+		_build_target_ragdoll()
+	if target_skeleton:
+		var left_shoulder := target_skeleton.find_bone("swat:LeftShoulder_011")
+		var right_shoulder := target_skeleton.find_bone("swat:RightShoulder_036")
 		if left_shoulder >= 0:
-			skeleton.set_bone_pose_rotation(left_shoulder, Quaternion(Vector3.FORWARD, deg_to_rad(55.0)))
+			target_skeleton.set_bone_pose_rotation(left_shoulder, Quaternion(Vector3.FORWARD, deg_to_rad(55.0)))
 		if right_shoulder >= 0:
-			skeleton.set_bone_pose_rotation(right_shoulder, Quaternion(Vector3.FORWARD, deg_to_rad(-55.0)))
+			target_skeleton.set_bone_pose_rotation(right_shoulder, Quaternion(Vector3.FORWARD, deg_to_rad(-55.0)))
 	# Colisión sencilla invisible para el raycast de los disparos.
 	target_body = StaticBody3D.new()
 	target_body.name = "ColisionObjetivo"
@@ -181,6 +189,63 @@ func _build_target() -> void:
 	shape.position.y = 0.88
 	target_body.add_child(shape)
 	target.add_child(target_body)
+
+func _build_target_ragdoll() -> void:
+	# Ragdoll ligado al esqueleto real: cápsulas de colisión en los huesos grandes,
+	# limitando dedos y huesos auxiliares para estabilidad y rendimiento móvil.
+	ragdoll_simulator = PhysicalBoneSimulator3D.new()
+	ragdoll_simulator.name = "PhysicalBoneSimulator3D"
+	target_skeleton.add_child(ragdoll_simulator)
+	var bone_defs: Array[Dictionary] = [
+		{"bone":"swat:Hips_02", "next":"swat:Spine_01", "radius":7.0, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:Spine_01", "next":"swat:Spine1_03", "radius":7.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Spine1_03", "next":"swat:Spine2_00", "radius":8.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Spine2_00", "next":"swat:Neck_04", "radius":7.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Neck_04", "next":"swat:Head_06", "radius":4.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Head_06", "next":"swat:HeadTop_End_07", "radius":9.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftShoulder_011", "next":"swat:LeftArm_012", "radius":5.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftArm_012", "next":"swat:LeftForeArm_013", "radius":4.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftForeArm_013", "next":"swat:LeftHand_015", "radius":3.8, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
+		{"bone":"swat:RightShoulder_036", "next":"swat:RightArm_037", "radius":5.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:RightArm_037", "next":"swat:RightForeArm_038", "radius":4.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:RightForeArm_038", "next":"swat:RightHand_039", "radius":3.8, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
+		{"bone":"swat:LeftUpLeg_060", "next":"swat:LeftLeg_061", "radius":6.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftLeg_061", "next":"swat:LeftFoot_062", "radius":4.7, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
+		{"bone":"swat:RightUpLeg_064", "next":"swat:RightLeg_065", "radius":6.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:RightLeg_065", "next":"swat:RightFoot_066", "radius":4.7, "joint":PhysicalBone3D.JOINT_TYPE_HINGE}
+	]
+	for defn in bone_defs:
+		var bone_idx := target_skeleton.find_bone(defn.bone)
+		var next_idx := target_skeleton.find_bone(defn.next)
+		if bone_idx < 0 or next_idx < 0:
+			continue
+		var start_pose := target_skeleton.get_bone_global_pose(bone_idx)
+		var end_pose := target_skeleton.get_bone_global_pose(next_idx)
+		var bone_length := start_pose.origin.distance_to(end_pose.origin)
+		if bone_length < 0.04:
+			continue
+		var physical := PhysicalBone3D.new()
+		physical.name = "Physical Bone " + String(defn.bone).replace("swat:", "")
+		physical.mass = 1.2 if String(defn.bone).contains("Hips") else 0.7
+		physical.friction = 0.8
+		physical.bounce = 0.0
+		physical.linear_damp = 0.25
+		physical.angular_damp = 0.8
+		ragdoll_simulator.add_child(physical)
+		# Assign after entering the simulator so Godot can resolve the bone index.
+		physical.set("bone_name", String(defn.bone))
+		physical.joint_type = int(defn.joint)
+		physical.transform = start_pose
+		var collision := CollisionShape3D.new()
+		var capsule := CapsuleShape3D.new()
+		capsule.radius = float(defn.radius)
+		capsule.height = maxf(bone_length, float(defn.radius) * 2.2)
+		collision.shape = capsule
+		collision.position.y = bone_length * 0.5
+		physical.add_child(collision)
+		ragdoll_bones.append(physical)
+	if ragdoll_bones.size() < 10:
+		push_error("Ragdoll incompleto: solo se crearon %d huesos físicos" % ragdoll_bones.size())
 
 func _on_weapon_animation_finished(_animation_name: StringName) -> void:
 	if not reloading:
@@ -457,18 +522,37 @@ func _shoot() -> void:
 	var to := from - camera.global_transform.basis.z * 100.0
 	var query := PhysicsRayQueryParameters3D.create(from,to)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	if not hit.is_empty() and not target_dead and hit.collider == target_body:
-		_kill_target(hit.position, hit.normal)
+	if not hit.is_empty() and not target_dead:
+		var collider := hit.collider as Node
+		if target_body and collider == target_body:
+			_kill_target(hit.position, hit.normal)
+		elif collider and target and target.is_ancestor_of(collider):
+			_kill_target(hit.position, hit.normal)
 
 
 func _kill_target(point: Vector3, normal: Vector3) -> void:
 	target_dead = true
 	status_label.text = "OBJETIVO: NEUTRALIZADO"
 	status_label.add_theme_color_override("font_color",Color(0.92,0.4,0.3))
-	# Caída visual del personaje tras el impacto; no es un ragdoll óseo.
-	var fall := create_tween()
-	fall.tween_property(target, "rotation:x", deg_to_rad(78.0), 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-	fall.parallel().tween_property(target, "position:y", 0.15, 0.55)
+	# Detén animación y pasa el esqueleto a física articulada.
+	if target_anim_player:
+		target_anim_player.stop()
+	if target_body:
+		target_body.queue_free()
+	if ragdoll_simulator and not ragdoll_bones.is_empty():
+		ragdoll_simulator.physical_bones_start_simulation()
+		var closest: PhysicalBone3D = ragdoll_bones[0]
+		var closest_distance := INF
+		for physical in ragdoll_bones:
+			var distance := physical.global_position.distance_to(point)
+			if distance < closest_distance:
+				closest_distance = distance
+				closest = physical
+		var away := (closest.global_position - point).normalized()
+		closest.apply_impulse(away * 1.6 + normal * 1.0, point - closest.global_position)
+		for physical in ragdoll_bones:
+			if physical != closest:
+				physical.apply_central_impulse(Vector3(0.0,0.18,0.0))
 
 
 func _reload() -> void:
