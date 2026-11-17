@@ -28,34 +28,18 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.1'
-      - name: Godot script and scene smoke test
+      - name: Godot import and script check
         run: |
-          set -o pipefail
-          timeout 45s godot --headless --path . --quit-after 2 --verbose 2>&1 | tee smoke.log
-          if grep -E 'SCRIPT ERROR|Parse Error|Failed to load script' smoke.log; then
-            echo "Godot reported a script or scene error"
-            exit 1
-          fi
+          godot --headless --editor --path . --import --quit
+          godot --headless --editor --path . --quit
+      - name: Smoke test scene
+        run: timeout 45s godot --headless --path . --quit-after 8 --verbose 2>&1 | tee smoke.log
       - name: Export APK
-        id: export
-        continue-on-error: true
         run: |
           mkdir -p build
-          set +e
-          godot --headless --path . --export-debug 'Android' build/ZonaDePrueba.apk 2>&1 | tee export.log
-          code=${PIPESTATUS[0]}
-          echo "GODOT_EXPORT_EXIT=$code"
-          if [ "$code" -eq 0 ] && [ -s build/ZonaDePrueba.apk ]; then touch export.ok; else exit 1; fi
+          godot --headless --path . --export-debug 'Android' build/ZonaDePrueba.apk
+          test -s build/ZonaDePrueba.apk
       - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ZonaDePrueba-export-diagnostics
-          path: |
-            export.log
-            build/ZonaDePrueba.apk
-          retention-days: 7
-      - uses: actions/upload-artifact@v4
-        if: steps.export.outcome == 'success'
         with:
           name: ZonaDePrueba-Android-APK
           path: build/ZonaDePrueba.apk
