@@ -134,8 +134,8 @@ func _build_player() -> void:
 		return
 	gun_model = weapon_scene.instantiate()
 	gun_model.name = "AK74M_ArmasFPS"
-	gun_model.scale = Vector3.ONE * 0.035
-	gun_model.position = Vector3(0.38,-0.38,-0.72)
+	gun_model.scale = Vector3.ONE * 0.55
+	gun_model.position = Vector3(0.32,-0.28,-0.68)
 	gun_model.rotation_degrees = Vector3(0.0,0.0,0.0)
 	camera.add_child(gun_model)
 	weapon_animation_player = gun_model.find_child("AnimationPlayer", true, false) as AnimationPlayer
@@ -190,6 +190,19 @@ func _build_target() -> void:
 	target_body.add_child(shape)
 	target.add_child(target_body)
 
+func _find_target_bone(requested: String) -> int:
+	if target_skeleton == null:
+		return -1
+	var exact := target_skeleton.find_bone(requested)
+	if exact >= 0:
+		return exact
+	var simple := requested.get_slice(":", 1).to_lower()
+	for i in range(target_skeleton.get_bone_count()):
+		var candidate := target_skeleton.get_bone_name(i).to_lower()
+		if candidate == simple or candidate.ends_with(simple):
+			return i
+	return -1
+
 func _build_target_ragdoll() -> void:
 	# Ragdoll ligado al esqueleto real: cápsulas de colisión en los huesos grandes,
 	# limitando dedos y huesos auxiliares para estabilidad y rendimiento móvil.
@@ -197,26 +210,26 @@ func _build_target_ragdoll() -> void:
 	ragdoll_simulator.name = "PhysicalBoneSimulator3D"
 	target_skeleton.add_child(ragdoll_simulator)
 	var bone_defs: Array[Dictionary] = [
-		{"bone":"swat:Hips_02", "next":"swat:Spine_01", "radius":7.0, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
-		{"bone":"swat:Spine_01", "next":"swat:Spine1_03", "radius":7.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Spine1_03", "next":"swat:Spine2_00", "radius":8.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Spine2_00", "next":"swat:Neck_04", "radius":7.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Neck_04", "next":"swat:Head_06", "radius":4.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Head_06", "next":"swat:HeadTop_End_07", "radius":9.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftShoulder_011", "next":"swat:LeftArm_012", "radius":5.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftArm_012", "next":"swat:LeftForeArm_013", "radius":4.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftForeArm_013", "next":"swat:LeftHand_015", "radius":3.8, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
-		{"bone":"swat:RightShoulder_036", "next":"swat:RightArm_037", "radius":5.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:RightArm_037", "next":"swat:RightForeArm_038", "radius":4.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:RightForeArm_038", "next":"swat:RightHand_039", "radius":3.8, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
-		{"bone":"swat:LeftUpLeg_060", "next":"swat:LeftLeg_061", "radius":6.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftLeg_061", "next":"swat:LeftFoot_062", "radius":4.7, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
-		{"bone":"swat:RightUpLeg_064", "next":"swat:RightLeg_065", "radius":6.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:RightLeg_065", "next":"swat:RightFoot_066", "radius":4.7, "joint":PhysicalBone3D.JOINT_TYPE_HINGE}
+		{"bone":"swat:Hips_02", "next":"swat:Spine_01", "radius":0.07, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:Spine_01", "next":"swat:Spine1_03", "radius":0.075, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Spine1_03", "next":"swat:Spine2_00", "radius":0.08, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Spine2_00", "next":"swat:Neck_04", "radius":0.07, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Neck_04", "next":"swat:Head_06", "radius":0.04, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Head_06", "next":"swat:HeadTop_End_07", "radius":0.09, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftShoulder_011", "next":"swat:LeftArm_012", "radius":0.05, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftArm_012", "next":"swat:LeftForeArm_013", "radius":0.045, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftForeArm_013", "next":"swat:LeftHand_015", "radius":0.038, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
+		{"bone":"swat:RightShoulder_036", "next":"swat:RightArm_037", "radius":0.05, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:RightArm_037", "next":"swat:RightForeArm_038", "radius":0.045, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:RightForeArm_038", "next":"swat:RightHand_039", "radius":0.038, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
+		{"bone":"swat:LeftUpLeg_060", "next":"swat:LeftLeg_061", "radius":0.065, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftLeg_061", "next":"swat:LeftFoot_062", "radius":0.047, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
+		{"bone":"swat:RightUpLeg_064", "next":"swat:RightLeg_065", "radius":0.065, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:RightLeg_065", "next":"swat:RightFoot_066", "radius":0.047, "joint":PhysicalBone3D.JOINT_TYPE_HINGE}
 	]
 	for defn in bone_defs:
-		var bone_idx := target_skeleton.find_bone(defn.bone)
-		var next_idx := target_skeleton.find_bone(defn.next)
+		var bone_idx := _find_target_bone(String(defn.bone))
+		var next_idx := _find_target_bone(String(defn.next))
 		if bone_idx < 0 or next_idx < 0:
 			continue
 		var start_pose := target_skeleton.get_bone_global_pose(bone_idx)
@@ -245,7 +258,9 @@ func _build_target_ragdoll() -> void:
 		physical.add_child(collision)
 		ragdoll_bones.append(physical)
 	if ragdoll_bones.size() < 10:
-		push_error("Ragdoll incompleto: solo se crearon %d huesos físicos" % ragdoll_bones.size())
+		var available: PackedStringArray = []
+		for i in range(target_skeleton.get_bone_count()): available.append(target_skeleton.get_bone_name(i))
+		push_error("Ragdoll incompleto: %d huesos físicos; huesos importados: %s" % [ragdoll_bones.size(), ", ".join(available)])
 
 func _on_weapon_animation_finished(_animation_name: StringName) -> void:
 	if not reloading:

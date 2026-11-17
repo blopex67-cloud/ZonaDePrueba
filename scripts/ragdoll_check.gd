@@ -19,8 +19,17 @@ func _run_check() -> void:
 		quit(1)
 		return
 	var bodies := simulator.find_children("*", "PhysicalBone3D", true, false)
+	print("RAGDOLL DEBUG: bodies=", bodies.size(), " bones=", game.get("target_skeleton").get_bone_count() if game.get("target_skeleton") else -1)
+	for body in bodies:
+		var pb := body as PhysicalBone3D
+		print("RAGDOLL BONE: ", body.name, " bone_name=", pb.get("bone_name"), " id=", pb.get_bone_id())
 	if bodies.size() < 10:
 		printerr("RAGDOLL CHECK FAILED: too few physical bones: ", bodies.size())
+		var skeleton := game.get("target_skeleton") as Skeleton3D
+		if skeleton:
+			var names: PackedStringArray = []
+			for i in range(skeleton.get_bone_count()): names.append(skeleton.get_bone_name(i))
+			printerr("RAGDOLL BONE NAMES: ", ", ".join(names))
 		quit(1)
 		return
 	for body in bodies:
