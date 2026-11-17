@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'scripts/**'
+      - 'assets/**'
+      - 'ATTRIBUTION.md'
+      - 'README.md'
       - 'project.godot'
       - 'Main.tscn'
       - 'export_presets.cfg'
@@ -30,11 +33,13 @@ jobs:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.1'
       - name: Import project files
         run: godot --headless --editor --path . --import --quit
+      - name: Validate imported 3D assets
+        run: godot --headless --path . --script res://scripts/asset_check.gd
       - name: Smoke test scene
         run: |
           set -o pipefail
           timeout 45s godot --headless --path . --quit-after 8 --verbose 2>&1 | tee smoke.log
-          if grep -E 'SCRIPT ERROR|Parse Error|Failed to load script|Error parsing' smoke.log; then exit 1; fi
+          if grep -E 'SCRIPT ERROR|Parse Error|Failed to load script|Error parsing|ERROR:|WARNING:.*Invalid' smoke.log; then exit 1; fi
       - name: Export APK
         id: export
         continue-on-error: true
