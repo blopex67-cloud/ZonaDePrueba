@@ -38,13 +38,42 @@ func _run_check() -> void:
 		quit(1)
 		return
 	for body in bodies:
-		if (body as PhysicalBone3D).get_bone_id() < 0:
+		var bone_body := body as PhysicalBone3D
+		if bone_body.get_bone_id() < 0:
 			printerr("RAGDOLL CHECK FAILED: bone not bound: ", body.name)
 			quit(1)
 			return
+	for body in bodies:
+		var bone_body := body as PhysicalBone3D
+		var shape_node := bone_body.find_child("CollisionShape3D", true, false) as CollisionShape3D
+		if shape_node == null or not (shape_node.shape is CapsuleShape3D) or (shape_node.shape as CapsuleShape3D).radius < 2.0:
+			printerr("RAGDOLL CHECK FAILED: collision capsule too small/missing on ", body.name)
+			quit(1)
+			return
 	game.call("_kill_target", Vector3(0,1,-4), Vector3(0,0,1))
-	await physics_frame
-	await physics_frame
+	for frame in range(30):
+		await physics_frame
+	if not is_instance_valid(game.get("target")):
+		printerr("RAGDOLL CHECK FAILED: target node disappeared after death")
+		quit(1)
+		return
+	var target_node := game.get("target") as Node3D
+	var meshes := target_node.find_children("*", "MeshInstance3D", true, false)
+	if meshes.is_empty():
+		printerr("RAGDOLL CHECK FAILED: target meshes missing after death")
+		quit(1)
+		return
+	if target_node.get_node_or_null("ColisionObjetivo") == null:
+		printerr("RAGDOLL CHECK FAILED: target root/visual hierarchy lost")
+		quit(1)
+		return
+	var visible_mesh := false
+	for mesh in meshes:
+		if (mesh as MeshInstance3D).is_visible_in_tree(): visible_mesh = true
+	if not visible_mesh:
+		printerr("RAGDOLL CHECK FAILED: target became invisible after hit")
+		quit(1)
+		return
 	var simulating := false
 	for body in bodies:
 		if (body as PhysicalBone3D).is_simulating_physics(): simulating = true

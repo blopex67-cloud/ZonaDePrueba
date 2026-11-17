@@ -155,7 +155,7 @@ func _build_target() -> void:
 	target = Node3D.new()
 	target.name = "ObjetivoDePrueba"
 	target.position = Vector3(0,0,-5)
-	target.rotation.y = PI
+	target.rotation.y = 0.0 # El GLB ya mira hacia +Z; no invertirlo respecto al jugador.
 	add_child(target)
 	# Personaje 3D original, riggeado y texturizado, recibido en el ZIP del usuario.
 	var soldier_scene := load("res://assets/police.glb") as PackedScene
@@ -170,14 +170,14 @@ func _build_target() -> void:
 	target_skeleton = soldier.find_child("Skeleton3D", true, false) as Skeleton3D
 	target_anim_player = soldier.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if target_skeleton:
-		_build_target_ragdoll()
-	if target_skeleton:
-		var left_shoulder := target_skeleton.find_bone("swat:LeftShoulder_011")
-		var right_shoulder := target_skeleton.find_bone("swat:RightShoulder_036")
+		# Aplicar la postura antes de crear los cuerpos: el ragdoll nace desde la pose visual correcta.
+		var left_shoulder := _find_target_bone("swat:LeftShoulder_011")
+		var right_shoulder := _find_target_bone("swat:RightShoulder_036")
 		if left_shoulder >= 0:
 			target_skeleton.set_bone_pose_rotation(left_shoulder, Quaternion(Vector3.FORWARD, deg_to_rad(55.0)))
 		if right_shoulder >= 0:
 			target_skeleton.set_bone_pose_rotation(right_shoulder, Quaternion(Vector3.FORWARD, deg_to_rad(-55.0)))
+		_build_target_ragdoll()
 	# Colisión sencilla invisible para el raycast de los disparos.
 	target_body = StaticBody3D.new()
 	target_body.name = "ColisionObjetivo"
@@ -210,22 +210,22 @@ func _build_target_ragdoll() -> void:
 	ragdoll_simulator.name = "PhysicalBoneSimulator3D"
 	target_skeleton.add_child(ragdoll_simulator)
 	var bone_defs: Array[Dictionary] = [
-		{"bone":"swat:Hips_02", "next":"swat:Spine_01", "radius":0.07, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
-		{"bone":"swat:Spine_01", "next":"swat:Spine1_03", "radius":0.075, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Spine1_03", "next":"swat:Spine2_00", "radius":0.08, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Spine2_00", "next":"swat:Neck_04", "radius":0.07, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Neck_04", "next":"swat:Head_06", "radius":0.04, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Head_06", "next":"swat:HeadTop_End_07", "radius":0.09, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftShoulder_011", "next":"swat:LeftArm_012", "radius":0.05, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftArm_012", "next":"swat:LeftForeArm_013", "radius":0.045, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftForeArm_013", "next":"swat:LeftHand_015", "radius":0.038, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
-		{"bone":"swat:RightShoulder_036", "next":"swat:RightArm_037", "radius":0.05, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:RightArm_037", "next":"swat:RightForeArm_038", "radius":0.045, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:RightForeArm_038", "next":"swat:RightHand_039", "radius":0.038, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
-		{"bone":"swat:LeftUpLeg_060", "next":"swat:LeftLeg_061", "radius":0.065, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftLeg_061", "next":"swat:LeftFoot_062", "radius":0.047, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
-		{"bone":"swat:RightUpLeg_064", "next":"swat:RightLeg_065", "radius":0.065, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:RightLeg_065", "next":"swat:RightFoot_066", "radius":0.047, "joint":PhysicalBone3D.JOINT_TYPE_HINGE}
+		{"bone":"swat:Hips_02", "next":"swat:Spine_01", "radius":7.0, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:Spine_01", "next":"swat:Spine1_03", "radius":7.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Spine1_03", "next":"swat:Spine2_00", "radius":8.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Spine2_00", "next":"swat:Neck_04", "radius":7.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Neck_04", "next":"swat:Head_06", "radius":4.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:Head_06", "next":"swat:HeadTop_End_07", "radius":9.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftShoulder_011", "next":"swat:LeftArm_012", "radius":5.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftArm_012", "next":"swat:LeftForeArm_013", "radius":4.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftForeArm_013", "next":"swat:LeftHand_015", "radius":3.8, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
+		{"bone":"swat:RightShoulder_036", "next":"swat:RightArm_037", "radius":5.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:RightArm_037", "next":"swat:RightForeArm_038", "radius":4.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:RightForeArm_038", "next":"swat:RightHand_039", "radius":3.8, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
+		{"bone":"swat:LeftUpLeg_060", "next":"swat:LeftLeg_061", "radius":6.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:LeftLeg_061", "next":"swat:LeftFoot_062", "radius":4.7, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
+		{"bone":"swat:RightUpLeg_064", "next":"swat:RightLeg_065", "radius":6.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
+		{"bone":"swat:RightLeg_065", "next":"swat:RightFoot_066", "radius":4.7, "joint":PhysicalBone3D.JOINT_TYPE_HINGE}
 	]
 	for defn in bone_defs:
 		var bone_idx := _find_target_bone(String(defn.bone))
@@ -555,8 +555,15 @@ func _kill_target(point: Vector3, normal: Vector3) -> void:
 	if target_anim_player:
 		target_anim_player.stop()
 	if target_body:
-		target_body.queue_free()
+		# Mantén el nodo de objetivo mientras cae el modelo, pero retíralo del raycast.
+		target_body.collision_layer = 0
+		target_body.collision_mask = 0
+		var hit_shape := target_body.get_node_or_null("CollisionShape3D") as CollisionShape3D
+		if hit_shape:
+			hit_shape.set_deferred("disabled", true)
 	if ragdoll_simulator and not ragdoll_bones.is_empty():
+		# Deja un frame para aplicar el último cambio de animación antes de activar física.
+		await get_tree().physics_frame
 		ragdoll_simulator.physical_bones_start_simulation()
 		var closest: PhysicalBone3D = ragdoll_bones[0]
 		var closest_distance := INF
@@ -566,10 +573,10 @@ func _kill_target(point: Vector3, normal: Vector3) -> void:
 				closest_distance = distance
 				closest = physical
 		var away := (closest.global_position - point).normalized()
-		closest.apply_impulse(away * 1.6 + normal * 1.0, point - closest.global_position)
+		closest.apply_impulse(away * 0.08 + normal * 0.04, point - closest.global_position)
 		for physical in ragdoll_bones:
 			if physical != closest:
-				physical.apply_central_impulse(Vector3(0.0,0.18,0.0))
+				physical.apply_central_impulse(Vector3.ZERO)
 
 
 func _reload() -> void:
