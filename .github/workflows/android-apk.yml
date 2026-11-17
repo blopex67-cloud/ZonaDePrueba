@@ -28,18 +28,13 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.1'
-      - name: Import project files (diagnostic)
-        continue-on-error: true
-        run: |
-          set +e
-          godot --headless --editor --path . --import --quit 2>&1 | tee import.log
-          echo "IMPORT_EXIT=${PIPESTATUS[0]}"
+      - name: Import project files
+        run: godot --headless --editor --path . --import --quit
       - name: Smoke test scene
-        continue-on-error: true
         run: |
-          set +e
+          set -o pipefail
           timeout 45s godot --headless --path . --quit-after 8 --verbose 2>&1 | tee smoke.log
-          echo "SMOKE_EXIT=${PIPESTATUS[0]}"
+          if grep -E 'SCRIPT ERROR|Parse Error|Failed to load script|Error parsing' smoke.log; then exit 1; fi
       - name: Export APK
         id: export
         continue-on-error: true
@@ -53,12 +48,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ZonaDePrueba-diagnostics
+          name: ZonaDePrueba-build-logs
           path: |
-            import.log
             smoke.log
             export.log
-          if-no-files-found: warn
+          if-no-files-found: ignore
           retention-days: 7
       - uses: actions/upload-artifact@v4
         if: steps.export.outputs.apk == 'true'
