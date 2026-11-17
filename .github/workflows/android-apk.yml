@@ -28,18 +28,38 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.1'
+      - name: Import project files
+        run: godot --headless --editor --path . --import --quit
       - name: Smoke test scene
         run: |
           set -o pipefail
           timeout 45s godot --headless --path . --quit-after 8 --verbose 2>&1 | tee smoke.log
           if grep -E 'SCRIPT ERROR|Parse Error|Failed to load script' smoke.log; then exit 1; fi
       - name: Export APK
+        id: export
+        continue-on-error: true
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug 'Android' build/ZonaDePrueba.apk
-          test -s build/ZonaDePrueba.apk
+          set +e
+          godot --headless --path . --export-debug 'Android' build/ZonaDePrueba.apk 2>&1 | tee export.log
+          code=${PIPESTATUS[0]}
+          echo "Godot export exit code: $code"
+          if [ "$code" -eq 0 ] && [ -s build/ZonaDePrueba.apk ]; then echo "apk=true" >> "$GITHUB_OUTPUT"; else echo "apk=false" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ZonaDePrueba-build-logs
+          path: |
+            smoke.log
+            export.log
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: steps.export.outputs.apk == 'true'
         with:
           name: ZonaDePrueba-Android-APK
           path: build/ZonaDePrueba.apk
           retention-days: 30
+      - name: Fail if APK export failed
+        if: steps.export.outputs.apk != 'true'
+        run: exit 1
