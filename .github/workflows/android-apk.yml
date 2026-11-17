@@ -1,1 +1,38 @@
-bmFtZTogQnVpbGQgWm9uYSBkZSBQcnVlYmEgQVBLCm9uOgogIHdvcmtmbG93X2Rpc3BhdGNoOgpwZXJtaXNzaW9uczoKICBjb250ZW50czogcmVhZApqb2JzOgogIGFwazoKICAgIHJ1bnMtb246IHVidW50dS0yNC4wNAogICAgc3RlcHM6CiAgICAgIC0gdXNlczogYWN0aW9ucy9jaGVja291dEB2NAogICAgICAtIHVzZXM6IGNoaWNrZW5zb2Z0LWdhbWVzL3NldHVwLWdvZG90QHYyCiAgICAgICAgd2l0aDoKICAgICAgICAgIHZlcnNpb246IDQuNC4xCiAgICAgICAgICB1c2UtZG90bmV0OiBmYWxzZQogICAgICAgICAgaW5jbHVkZS10ZW1wbGF0ZXM6IHRydWUKICAgICAgLSB1c2VzOiBhY3Rpb25zL3NldHVwLWphdmFAdjQKICAgICAgICB3aXRoOgogICAgICAgICAgZGlzdHJpYnV0aW9uOiB0ZW11cmluCiAgICAgICAgICBqYXZhLXZlcnNpb246ICcxNycKICAgICAgLSB1c2VzOiBhbmRyb2lkLWFjdGlvbnMvc2V0dXAtYW5kcm9pZEB2NAogICAgICAgIHdpdGg6CiAgICAgICAgICBwYWNrYWdlczogJ3BsYXRmb3JtLXRvb2xzIHBsYXRmb3JtczthbmRyb2lkLTM1IGJ1aWxkLXRvb2xzOzM1LjAuMScKICAgICAgLSBuYW1lOiBHb2RvdCBpbXBvcnQgYW5kIHNjcmlwdCBjaGVjawogICAgICAgIHJ1bjogfAogICAgICAgICAgZ29kb3QgLS1oZWFkbGVzcyAtLWVkaXRvciAtLXBhdGggLiAtLWltcG9ydCAtLXF1aXQKICAgICAgICAgIGdvZG90IC0taGVhZGxlc3MgLS1lZGl0b3IgLS1wYXRoIC4gLS1xdWl0CiAgICAgIC0gbmFtZTogU21va2UgdGVzdCBzY2VuZQogICAgICAgIHJ1bjogdGltZW91dCA0NXMgZ29kb3QgLS1oZWFkbGVzcyAtLXBhdGggLiAtLXF1aXQtYWZ0ZXIgOCAtLXZlcmJvc2UgMj4mMSB8IHRlZSBzbW9rZS5sb2cKICAgICAgLSBuYW1lOiBFeHBvcnQgQVBLCiAgICAgICAgcnVuOiB8CiAgICAgICAgICBta2RpciAtcCBidWlsZAogICAgICAgICAgZ29kb3QgLS1oZWFkbGVzcyAtLXBhdGggLiAtLWV4cG9ydC1kZWJ1ZyAnQW5kcm9pZCcgYnVpbGQvWm9uYURlUHJ1ZWJhLmFwawogICAgICAgICAgdGVzdCAtcyBidWlsZC9ab25hRGVQcnVlYmEuYXBrCiAgICAgIC0gdXNlczogYWN0aW9ucy91cGxvYWQtYXJ0aWZhY3RAdjQKICAgICAgICB3aXRoOgogICAgICAgICAgbmFtZTogWm9uYURlUHJ1ZWJhLUFuZHJvaWQtQVBLCiAgICAgICAgICBwYXRoOiBidWlsZC9ab25hRGVQcnVlYmEuYXBrCiAgICAgICAgICByZXRlbnRpb24tZGF5czogMzAK
+name: Build Zona de Prueba APK
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.1'
+      - name: Godot import and script check
+        run: |
+          godot --headless --editor --path . --import --quit
+          godot --headless --editor --path . --quit
+      - name: Smoke test scene
+        run: timeout 45s godot --headless --path . --quit-after 8 --verbose 2>&1 | tee smoke.log
+      - name: Export APK
+        run: |
+          mkdir -p build
+          godot --headless --path . --export-debug 'Android' build/ZonaDePrueba.apk
+          test -s build/ZonaDePrueba.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZonaDePrueba-Android-APK
+          path: build/ZonaDePrueba.apk
+          retention-days: 30
