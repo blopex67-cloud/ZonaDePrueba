@@ -80,7 +80,8 @@ func _build_world() -> void:
 	sun.light_energy = 1.2
 	sun.shadow_enabled = true
 	add_child(sun)
-	_box(self,"Piso",Vector3(0,-0.18,-9),Vector3(30,0.35,44),Color(0.16,0.19,0.21),0.92)
+	var floor_mesh := _box(self,"Piso",Vector3(0,-0.18,-9),Vector3(30,0.35,44),Color(0.16,0.19,0.21),0.92)
+	floor_mesh.create_trimesh_collision()
 	_box(self,"ParedFondo",Vector3(0,3,-30),Vector3(30,6,0.5),Color(0.24,0.29,0.33))
 	_box(self,"ParedIzquierda",Vector3(-15,3,-9),Vector3(0.5,6,42),Color(0.19,0.23,0.27))
 	_box(self,"ParedDerecha",Vector3(15,3,-9),Vector3(0.5,6,42),Color(0.19,0.23,0.27))
