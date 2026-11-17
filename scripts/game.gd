@@ -350,7 +350,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag:
 		if event.index==stick_finger: _set_stick(event.position)
 		elif event.index==look_finger:
-			var delta := event.position-last_look
+			var delta: Vector2 = event.position-last_look
 			_rotate_view(delta)
 			last_look=event.position
 	elif event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT and not OS.has_feature("android"):
