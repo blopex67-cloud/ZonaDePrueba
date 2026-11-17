@@ -155,7 +155,7 @@ func _build_target() -> void:
 	target = Node3D.new()
 	target.name = "ObjetivoDePrueba"
 	target.position = Vector3(0,0,-5)
-	target.rotation.y = 0.0 # El GLB ya mira hacia +Z; no invertirlo respecto al jugador.
+	target.rotation.y = PI # El modelo debe mirar hacia el jugador.
 	add_child(target)
 	# Personaje 3D original, riggeado y texturizado, recibido en el ZIP del usuario.
 	var soldier_scene := load("res://assets/police.glb") as PackedScene

@@ -45,9 +45,16 @@ func _run_check() -> void:
 			return
 	for body in bodies:
 		var bone_body := body as PhysicalBone3D
-		var shape_node := bone_body.find_child("CollisionShape3D", true, false) as CollisionShape3D
-		if shape_node == null or not (shape_node.shape is CapsuleShape3D) or (shape_node.shape as CapsuleShape3D).radius < 2.0:
-			printerr("RAGDOLL CHECK FAILED: collision capsule too small/missing on ", body.name)
+		var capsule_ok := false
+		for child in bone_body.get_children():
+			if child is CollisionShape3D:
+				var shape_node := child as CollisionShape3D
+				if shape_node.shape is CapsuleShape3D:
+					var radius := (shape_node.shape as CapsuleShape3D).radius
+					print("RAGDOLL COLLIDER: ", body.name, " radius=", radius)
+					if radius >= 2.0: capsule_ok = true
+		if not capsule_ok:
+			printerr("RAGDOLL CHECK FAILED: collision capsule too small/missing on ", body.name, " child_count=", bone_body.get_child_count())
 			quit(1)
 			return
 	game.call("_kill_target", Vector3(0,1,-4), Vector3(0,0,1))
