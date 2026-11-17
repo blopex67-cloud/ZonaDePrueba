@@ -1,6 +1,1 @@
-[gd_scene load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://scripts/game.gd" id="1"]
-
-[node name="ZonaDePrueba" type="Node3D"]
-script = ExtResource("1")
+W2dkX3NjZW5lIGxvYWRfc3RlcHM9MiBmb3JtYXQ9M10KCltleHRfcmVzb3VyY2UgdHlwZT0iU2NyaXB0IiBwYXRoPSJyZXM6Ly9zY3JpcHRzL2dhbWUuZ2QiIGlkPSIxIl0KCltub2RlIG5hbWU9IlpvbmFEZVBydWViYSIgdHlwZT0iTm9kZTNEIl0Kc2NyaXB0ID0gRXh0UmVzb3VyY2UoIjEiKQo=
