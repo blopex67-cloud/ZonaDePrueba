@@ -36,9 +36,49 @@ jobs:
             echo "Godot reported a script or scene error"
             exit 1
           fi
+      - name: Configure Android signing and export tools
+        run: |
+          mkdir -p "$HOME/.config/godot" "$HOME/.android" build
+          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<SETTINGS
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME_17_X64"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          SETTINGS
+          sed -i '/package\/signed=true/a keystore/debug="'"$HOME"'/.android/debug.keystore"\nkeystore/debug_user="androiddebugkey"\nkeystore/debug_password="android"' export_presets.cfg
+          curl -fL --retry 3 -o /tmp/export_templates.tpz "https://downloads.godotengine.org/?version=4.4.1&flavor=stable&slug=export_templates.tpz&platform=templates"
+          python3 - <<'PY'
+          from zipfile import ZipFile
+          from pathlib import Path
+          outer=ZipFile('/tmp/export_templates.tpz')
+          names=[n for n in outer.namelist() if n.endswith('android_source.zip')]
+          if not names: raise SystemExit('Android source template not found')
+          Path('android_source.zip').write_bytes(outer.read(names[0]))
+          PY
+          mkdir -p android/build
+          python3 - <<'PY'
+          from zipfile import ZipFile
+          from pathlib import Path
+          with ZipFile('android_source.zip') as z:
+              z.extractall('android/build')
+          root=Path('android/build')
+          nested=list(root.glob('*/build.gradle'))
+          if nested:
+              src=nested[0].parent
+              for item in list(src.iterdir()): item.rename(root/item.name)
+              src.rmdir()
+          if not list(root.rglob('build.gradle')): raise SystemExit('Android Gradle template missing')
+          import hashlib
+          (root/'.gdignore').write_text('')
+          Path('android/.build_version').write_text('res://android_source.zip ['+hashlib.md5(Path('android_source.zip').read_bytes()).hexdigest()+']')
+          PY
       - name: Export APK
         run: |
-          mkdir -p build
           godot --headless --path . --export-debug 'Android' build/ZonaDePrueba.apk
           test -s build/ZonaDePrueba.apk
       - uses: actions/upload-artifact@v4
