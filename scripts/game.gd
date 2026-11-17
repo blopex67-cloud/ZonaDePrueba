@@ -27,8 +27,8 @@ var sound_player: AudioStreamPlayer
 var reload_player: AudioStreamPlayer
 var step_player: AudioStreamPlayer
 var gun_model: Node3D
-var target_parts: Dictionary = {}
-var idle_time := 0.0
+var weapon_animation_player: AnimationPlayer
+var target_body: StaticBody3D
 var footstep_time := 0.0
 var rng := RandomNumberGenerator.new()
 
@@ -123,40 +123,77 @@ func _build_player() -> void:
 	camera.current = true
 	camera.fov = 78
 	pivot.add_child(camera)
-	# Arma de prueba de geometría original; se reemplazará por el asset seleccionado tras validar licencia.
-	gun_model = Node3D.new()
-	gun_model.position = Vector3(0.32,-0.28,-0.62)
+	# Modelo original FPS AK-74M, con brazos, texturas y clips de animación.
+	var weapon_scene := load("res://assets/fps_ak-74m_animations.glb") as PackedScene
+	if weapon_scene == null:
+		push_error("No se pudo cargar el modelo FPS AK-74M")
+		return
+	gun_model = weapon_scene.instantiate()
+	gun_model.name = "AK74M_ArmasFPS"
+	gun_model.scale = Vector3.ONE * 0.01
+	gun_model.position = Vector3(0.12,-0.20,-0.38)
 	camera.add_child(gun_model)
-	_box(gun_model,"ArmaPlaceholder",Vector3.ZERO,Vector3(0.18,0.16,0.66),Color(0.12,0.15,0.17),0.4,0.75)
-	_box(gun_model,"Empuñadura",Vector3(0,-0.13,0.1),Vector3(0.12,0.25,0.14),Color(0.09,0.1,0.1),0.65)
-	_box(gun_model,"Mira",Vector3(0,0.115,-0.12),Vector3(0.08,0.06,0.2),Color(0.2,0.24,0.26),0.4,0.7)
-	_box(gun_model,"Culata",Vector3(0,0,0.27),Vector3(0.22,0.14,0.2),Color(0.11,0.13,0.13),0.6,0.4)
+	weapon_animation_player = gun_model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if weapon_animation_player:
+		weapon_animation_player.animation_finished.connect(_on_weapon_animation_finished)
+		_play_weapon_animation("Idle")
 	var flash := OmniLight3D.new()
 	flash.name = "FlashDisparo"
-	flash.position = Vector3(0,0,-0.48)
+	flash.position = Vector3(0,0,-0.56)
 	flash.light_color = Color(1.0,0.63,0.24)
-	flash.light_energy = 0
-	flash.omni_range = 3.0
+	flash.light_energy = 0.0
+	flash.omni_range = 2.2
 	gun_model.add_child(flash)
+
 
 func _build_target() -> void:
 	target = Node3D.new()
 	target.name = "ObjetivoDePrueba"
 	target.position = Vector3(0,0,-12)
+	target.rotation.y = PI
 	add_child(target)
-	# Dummy provisional articulado para validar disparo y ragdoll antes de incorporar el personaje riggeado.
-	var torso := _rigid_part("Torso",Vector3(0,1.2,0),Vector3(0.62,0.8,0.32),Color(0.23,0.31,0.36),1.5)
-	var head := _rigid_part("CascoCabeza",Vector3(0,1.86,0),Vector3(0.4,0.4,0.38),Color(0.32,0.38,0.4),0.5)
-	var chest := _rigid_part("Chaleco",Vector3(0,1.27,-0.18),Vector3(0.66,0.52,0.12),Color(0.14,0.2,0.2),0.3)
-	var left_arm := _rigid_part("BrazoIzquierdo",Vector3(-0.46,1.24,0),Vector3(0.2,0.72,0.22),Color(0.3,0.35,0.35),0.4)
-	var right_arm := _rigid_part("BrazoDerecho",Vector3(0.46,1.24,0),Vector3(0.2,0.72,0.22),Color(0.3,0.35,0.35),0.4)
-	var left_leg := _rigid_part("PiernaIzquierda",Vector3(-0.17,0.45,0),Vector3(0.24,0.78,0.3),Color(0.18,0.23,0.24),0.2)
-	var right_leg := _rigid_part("PiernaDerecha",Vector3(0.17,0.45,0),Vector3(0.24,0.78,0.3),Color(0.18,0.23,0.24),0.2)
-	var weapon := _rigid_part("Rifle",Vector3(0.44,1.03,-0.3),Vector3(0.14,0.14,0.82),Color(0.08,0.09,0.1),0.55)
-	for p in [torso,head,chest,left_arm,right_arm,left_leg,right_leg,weapon]:
-		p.freeze = true
-		p.sleeping = true
-		target_parts[p.name] = p
+	# Personaje 3D original, riggeado y texturizado, recibido en el ZIP del usuario.
+	var soldier_scene := load("res://assets/police.glb") as PackedScene
+	if soldier_scene == null:
+		push_error("No se pudo cargar el modelo riggeado POLICE")
+		return
+	var soldier := soldier_scene.instantiate()
+	soldier.name = "SoldadoRiggeado"
+	soldier.scale = Vector3.ONE * 0.01
+	target.add_child(soldier)
+	# Postura de guardia: bajar brazos del T-pose importado, sin patrulla ni alarma.
+	var skeleton := soldier.find_child("Skeleton3D", true, false) as Skeleton3D
+	if skeleton:
+		var left_shoulder := skeleton.find_bone("swat:LeftShoulder_011")
+		var right_shoulder := skeleton.find_bone("swat:RightShoulder_036")
+		if left_shoulder >= 0:
+			skeleton.set_bone_pose_rotation(left_shoulder, Quaternion(Vector3.FORWARD, deg_to_rad(55.0)))
+		if right_shoulder >= 0:
+			skeleton.set_bone_pose_rotation(right_shoulder, Quaternion(Vector3.FORWARD, deg_to_rad(-55.0)))
+	# Colisión sencilla invisible para el raycast de los disparos.
+	target_body = StaticBody3D.new()
+	target_body.name = "ColisionObjetivo"
+	var shape := CollisionShape3D.new()
+	var body_capsule := CapsuleShape3D.new()
+	body_capsule.radius = 0.42
+	body_capsule.height = 1.75
+	shape.shape = body_capsule
+	shape.position.y = 0.88
+	target_body.add_child(shape)
+	target.add_child(target_body)
+
+func _on_weapon_animation_finished(_animation_name: StringName) -> void:
+	if not reloading:
+		_play_weapon_animation("Idle")
+
+func _play_weapon_animation(fragment: String) -> void:
+	if weapon_animation_player == null:
+		return
+	for animation_name in weapon_animation_player.get_animation_list():
+		if String(animation_name).contains(fragment):
+			weapon_animation_player.play(animation_name)
+			return
+
 
 func _rigid_part(n: String, pos: Vector3, size: Vector3, color: Color, _dummy: float) -> RigidBody3D:
 	var body := RigidBody3D.new()
@@ -375,26 +412,17 @@ func _rotate_view(delta: Vector2) -> void:
 	camera.rotation.x=clampf(camera.rotation.x-delta.y*LOOK_SENS*2.0,-1.1,1.1)
 
 func _process(delta: float) -> void:
-	if not target_dead:
-		idle_time += delta
-		# Movimiento sutil de espera para validar el ciclo idle mientras el soldado final se integra.
-		var chest: RigidBody3D = target_parts.get("Torso")
-		if is_instance_valid(chest) and chest.freeze:
-			chest.position.y = 1.2 + sin(idle_time * 1.7) * 0.018
-			chest.rotation.z = sin(idle_time * 0.9) * 0.008
-			var arm_l: RigidBody3D = target_parts.get("BrazoIzquierdo")
-			var arm_r: RigidBody3D = target_parts.get("BrazoDerecho")
-			if is_instance_valid(arm_l): arm_l.rotation.z = 0.03 + sin(idle_time * 1.2) * 0.012
-			if is_instance_valid(arm_r): arm_r.rotation.z = -0.03 + sin(idle_time * 1.2 + 0.25) * 0.012
 	if fire_down:
-		fire_timer-=delta
-		if fire_timer<=0:
-			_shoot(); fire_timer=0.16
-	if not OS.has_feature("android") and Input.is_key_pressed(KEY_W): move_vector.y=1
-	if not OS.has_feature("android") and Input.is_key_pressed(KEY_S): move_vector.y=-1
-	if not OS.has_feature("android") and Input.is_key_pressed(KEY_A): move_vector.x=-1
-	if not OS.has_feature("android") and Input.is_key_pressed(KEY_D): move_vector.x=1
-	if not OS.has_feature("android") and Input.is_key_pressed(KEY_ESCAPE): Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
+		fire_timer -= delta
+		if fire_timer <= 0.0:
+			_shoot()
+			fire_timer = 0.16
+	if not OS.has_feature("android") and Input.is_key_pressed(KEY_W): move_vector.y = 1
+	if not OS.has_feature("android") and Input.is_key_pressed(KEY_S): move_vector.y = -1
+	if not OS.has_feature("android") and Input.is_key_pressed(KEY_A): move_vector.x = -1
+	if not OS.has_feature("android") and Input.is_key_pressed(KEY_D): move_vector.x = 1
+	if not OS.has_feature("android") and Input.is_key_pressed(KEY_ESCAPE): Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
 
 func _physics_process(delta: float) -> void:
 	if Vector2(player.velocity.x, player.velocity.z).length() > 0.4 and player.is_on_floor():
@@ -410,39 +438,44 @@ func _physics_process(delta: float) -> void:
 	player.move_and_slide()
 
 func _shoot() -> void:
-	if reloading or ammo<=0: return
-	ammo-=1
-	ammo_label.text="%02d  /  %03d" % [ammo,reserve]
+	if reloading or ammo <= 0:
+		return
+	ammo -= 1
+	ammo_label.text = "%02d  /  %03d" % [ammo,reserve]
 	sound_player.play()
-	gun_model.position.z = -0.54
-	var flash: OmniLight3D = gun_model.get_node("FlashDisparo")
-	flash.light_energy = 2.3
+	_play_weapon_animation("Shot")
+	var flash := gun_model.get_node_or_null("FlashDisparo") as OmniLight3D
+	if flash:
+		flash.light_energy = 2.0
+		var fade := create_tween()
+		fade.tween_property(flash, "light_energy", 0.0, 0.05)
+	var original_pos := gun_model.position
 	var recoil := create_tween()
-	recoil.tween_property(gun_model, "position:z", -0.62, 0.11)
-	recoil.parallel().tween_property(flash, "light_energy", 0.0, 0.045)
+	recoil.tween_property(gun_model, "position", original_pos + Vector3(0,0.025,0.055), 0.045)
+	recoil.tween_property(gun_model, "position", original_pos, 0.10)
 	var from := camera.global_position
-	var to := from-camera.global_transform.basis.z*100.0
+	var to := from - camera.global_transform.basis.z * 100.0
 	var query := PhysicsRayQueryParameters3D.create(from,to)
-	query.collide_with_areas=true
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	if not hit.is_empty() and not target_dead and target.is_ancestor_of(hit.collider):
-		_kill_target(hit.position,hit.normal)
+	if not hit.is_empty() and not target_dead and hit.collider == target_body:
+		_kill_target(hit.position, hit.normal)
+
 
 func _kill_target(point: Vector3, normal: Vector3) -> void:
-	target_dead=true
-	status_label.text="OBJETIVO: NEUTRALIZADO"
+	target_dead = true
+	status_label.text = "OBJETIVO: NEUTRALIZADO"
 	status_label.add_theme_color_override("font_color",Color(0.92,0.4,0.3))
-	for child in target.get_children():
-		if child is RigidBody3D:
-			child.freeze=false
-			child.sleeping=false
-			child.apply_impulse((child.global_position-point).normalized()*rng.randf_range(1.5,3.5)+normal*0.8)
-			child.apply_torque_impulse(Vector3(rng.randf_range(-1.5,1.5),rng.randf_range(-1.2,1.2),rng.randf_range(-1.5,1.5)))
+	# Caída visual del personaje tras el impacto; no es un ragdoll óseo.
+	var fall := create_tween()
+	fall.tween_property(target, "rotation:x", deg_to_rad(78.0), 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	fall.parallel().tween_property(target, "position:y", 0.15, 0.55)
+
 
 func _reload() -> void:
 	if reloading or ammo==30 or reserve<=0: return
 	reloading=true
 	status_label.text="RECARGANDO..."
+	_play_weapon_animation("Reload")
 	reload_player.play()
 	await get_tree().create_timer(1.2).timeout
 	var take := mini(30-ammo,reserve)
@@ -450,3 +483,4 @@ func _reload() -> void:
 	ammo_label.text="%02d  /  %03d" % [ammo,reserve]
 	if not target_dead: status_label.text="OBJETIVO: ACTIVO"
 	reloading=false
+	_play_weapon_animation("Idle")
