@@ -211,21 +211,21 @@ func _build_target_ragdoll() -> void:
 	target_skeleton.add_child(ragdoll_simulator)
 	var bone_defs: Array[Dictionary] = [
 		{"bone":"swat:Hips_02", "next":"swat:Spine_01", "radius":7.0, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
-		{"bone":"swat:Spine_01", "next":"swat:Spine1_03", "radius":7.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Spine1_03", "next":"swat:Spine2_00", "radius":8.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Spine2_00", "next":"swat:Neck_04", "radius":7.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Neck_04", "next":"swat:Head_06", "radius":4.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:Head_06", "next":"swat:HeadTop_End_07", "radius":9.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftShoulder_011", "next":"swat:LeftArm_012", "radius":5.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftArm_012", "next":"swat:LeftForeArm_013", "radius":4.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftForeArm_013", "next":"swat:LeftHand_015", "radius":3.8, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
-		{"bone":"swat:RightShoulder_036", "next":"swat:RightArm_037", "radius":5.0, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:RightArm_037", "next":"swat:RightForeArm_038", "radius":4.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:RightForeArm_038", "next":"swat:RightHand_039", "radius":3.8, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
-		{"bone":"swat:LeftUpLeg_060", "next":"swat:LeftLeg_061", "radius":6.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:LeftLeg_061", "next":"swat:LeftFoot_062", "radius":4.7, "joint":PhysicalBone3D.JOINT_TYPE_HINGE},
-		{"bone":"swat:RightUpLeg_064", "next":"swat:RightLeg_065", "radius":6.5, "joint":PhysicalBone3D.JOINT_TYPE_CONE},
-		{"bone":"swat:RightLeg_065", "next":"swat:RightFoot_066", "radius":4.7, "joint":PhysicalBone3D.JOINT_TYPE_HINGE}
+		{"bone":"swat:Spine_01", "next":"swat:Spine1_03", "radius":7.5, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:Spine1_03", "next":"swat:Spine2_00", "radius":8.0, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:Spine2_00", "next":"swat:Neck_04", "radius":7.0, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:Neck_04", "next":"swat:Head_06", "radius":4.0, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:Head_06", "next":"swat:HeadTop_End_07", "radius":9.0, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:LeftShoulder_011", "next":"swat:LeftArm_012", "radius":5.0, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:LeftArm_012", "next":"swat:LeftForeArm_013", "radius":4.5, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:LeftForeArm_013", "next":"swat:LeftHand_015", "radius":3.8, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:RightShoulder_036", "next":"swat:RightArm_037", "radius":5.0, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:RightArm_037", "next":"swat:RightForeArm_038", "radius":4.5, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:RightForeArm_038", "next":"swat:RightHand_039", "radius":3.8, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:LeftUpLeg_060", "next":"swat:LeftLeg_061", "radius":6.5, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:LeftLeg_061", "next":"swat:LeftFoot_062", "radius":4.7, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:RightUpLeg_064", "next":"swat:RightLeg_065", "radius":6.5, "joint":PhysicalBone3D.JOINT_TYPE_PIN},
+		{"bone":"swat:RightLeg_065", "next":"swat:RightFoot_066", "radius":4.7, "joint":PhysicalBone3D.JOINT_TYPE_PIN}
 	]
 	for defn in bone_defs:
 		var bone_idx := _find_target_bone(String(defn.bone))
@@ -239,7 +239,7 @@ func _build_target_ragdoll() -> void:
 		if bone_length < 0.04:
 			continue
 		var half_height := bone_length * 0.5
-		var radius := minf(float(defn.radius), half_height * 0.2)
+		var radius := minf(float(defn.radius), half_height * 0.12)
 		var physical := PhysicalBone3D.new()
 		physical.name = "Physical Bone " + String(defn.bone).replace("swat:", "")
 		physical.mass = 1.2 if String(defn.bone).contains("Hips") else 0.7
@@ -269,11 +269,6 @@ func _build_target_ragdoll() -> void:
 		ragdoll_bones.append(physical)
 		if physical.get_bone_id() < 0:
 			push_warning("No se pudo enlazar hueso físico: %s / %s" % [physical.name, target_skeleton.get_bone_name(bone_idx)])
-	# Los cuerpos del propio muñeco no deben golpearse entre sí: sus cápsulas
-	# solapan intencionadamente en las articulaciones y si chocan lo catapultan.
-	for i in range(ragdoll_bones.size()):
-		for j in range(i + 1, ragdoll_bones.size()):
-			ragdoll_bones[i].add_collision_exception_with(ragdoll_bones[j])
 	if ragdoll_bones.size() < 10:
 		var available: PackedStringArray = []
 		for i in range(target_skeleton.get_bone_count()): available.append(target_skeleton.get_bone_name(i))
@@ -588,7 +583,8 @@ func _kill_target(point: Vector3, normal: Vector3) -> void:
 				closest_distance = distance
 				closest = physical
 		# Avoid an impulse that can launch the small target out of the viewport.
-		closest.apply_central_impulse(Vector3.ZERO)
+		closest.linear_velocity = Vector3.ZERO
+		closest.angular_velocity = Vector3.ZERO
 
 
 
