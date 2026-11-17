@@ -244,6 +244,10 @@ func _build_target_ragdoll() -> void:
 		physical.bounce = 0.0
 		physical.linear_damp = 0.25
 		physical.angular_damp = 0.8
+		# Put ragdoll parts on their own layer and collide only with the world.
+		# This prevents overlapping joint capsules from launching the mannequin.
+		physical.collision_layer = 2
+		physical.collision_mask = 1
 		ragdoll_simulator.add_child(physical)
 		# Assign after entering the simulator so Godot can resolve the bone index.
 		physical.set("bone_name", target_skeleton.get_bone_name(bone_idx))
@@ -577,8 +581,8 @@ func _kill_target(point: Vector3, normal: Vector3) -> void:
 			if distance < closest_distance:
 				closest_distance = distance
 				closest = physical
-		var away := (closest.global_position - point).normalized()
-		closest.apply_impulse(away * 0.015 + normal * 0.01, point - closest.global_position)
+		# Avoid an impulse that can launch the small target out of the viewport.
+		closest.apply_central_impulse(Vector3.ZERO)
 
 
 

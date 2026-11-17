@@ -39,6 +39,10 @@ func _run_check() -> void:
 		return
 	for body in bodies:
 		var bone_body := body as PhysicalBone3D
+		if bone_body.collision_layer != 2 or bone_body.collision_mask != 1:
+			printerr("RAGDOLL CHECK FAILED: incorrect collision filtering on ", body.name)
+			quit(1)
+			return
 		if bone_body.get_bone_id() < 0:
 			printerr("RAGDOLL CHECK FAILED: bone not bound: ", body.name)
 			quit(1)
