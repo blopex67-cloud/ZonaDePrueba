@@ -19,6 +19,11 @@ func _run_check() -> void:
 		quit(1)
 		return
 	var bodies := simulator.find_children("*", "PhysicalBone3D", true, false)
+	var skeleton_names: PackedStringArray = []
+	var skeleton := game.get("target_skeleton") as Skeleton3D
+	if skeleton:
+		for i in range(skeleton.get_bone_count()): skeleton_names.append(skeleton.get_bone_name(i))
+	print("RAGDOLL SKELETON BONES: ", ", ".join(skeleton_names))
 	print("RAGDOLL DEBUG: bodies=", bodies.size(), " bones=", game.get("target_skeleton").get_bone_count() if game.get("target_skeleton") else -1)
 	for body in bodies:
 		var pb := body as PhysicalBone3D

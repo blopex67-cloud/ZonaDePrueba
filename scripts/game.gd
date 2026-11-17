@@ -246,7 +246,7 @@ func _build_target_ragdoll() -> void:
 		physical.angular_damp = 0.8
 		ragdoll_simulator.add_child(physical)
 		# Assign after entering the simulator so Godot can resolve the bone index.
-		physical.set("bone_name", String(defn.bone))
+		physical.set("bone_name", target_skeleton.get_bone_name(bone_idx))
 		physical.joint_type = int(defn.joint)
 		physical.transform = start_pose
 		var collision := CollisionShape3D.new()
@@ -257,6 +257,8 @@ func _build_target_ragdoll() -> void:
 		collision.position.y = bone_length * 0.5
 		physical.add_child(collision)
 		ragdoll_bones.append(physical)
+	if physical.get_bone_id() < 0:
+		push_warning("No se pudo enlazar hueso físico: %s / %s" % [physical.name, target_skeleton.get_bone_name(bone_idx)])
 	if ragdoll_bones.size() < 10:
 		var available: PackedStringArray = []
 		for i in range(target_skeleton.get_bone_count()): available.append(target_skeleton.get_bone_name(i))
