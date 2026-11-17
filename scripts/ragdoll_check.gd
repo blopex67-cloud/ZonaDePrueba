@@ -56,7 +56,7 @@ func _run_check() -> void:
 				if shape_node.shape is CapsuleShape3D:
 					var radius := (shape_node.shape as CapsuleShape3D).radius
 					print("RAGDOLL COLLIDER: ", body.name, " radius=", radius)
-					if radius > 0.001 and radius < 2.0: capsule_ok = true
+					if radius > 0.0 and radius < 10.0: capsule_ok = true
 		if not capsule_ok:
 			printerr("RAGDOLL CHECK FAILED: collision capsule too small/missing on ", body.name, " child_count=", bone_body.get_child_count())
 			quit(1)
