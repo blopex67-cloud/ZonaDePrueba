@@ -28,12 +28,14 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.1'
-      - name: Godot import and script check
+      - name: Godot script and scene smoke test
         run: |
-          godot --headless --editor --path . --import --quit
-          godot --headless --editor --path . --quit
-      - name: Smoke test scene
-        run: timeout 45s godot --headless --path . --quit-after 8 --verbose 2>&1 | tee smoke.log
+          set -o pipefail
+          timeout 45s godot --headless --path . --quit-after 2 --verbose 2>&1 | tee smoke.log
+          if grep -E 'SCRIPT ERROR|Parse Error|Failed to load script' smoke.log; then
+            echo "Godot reported a script or scene error"
+            exit 1
+          fi
       - name: Export APK
         run: |
           mkdir -p build
