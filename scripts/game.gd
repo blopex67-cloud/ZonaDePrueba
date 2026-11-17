@@ -232,33 +232,39 @@ func _build_target_ragdoll() -> void:
 		var next_idx := _find_target_bone(String(defn.next))
 		if bone_idx < 0 or next_idx < 0:
 			continue
-		var start_pose := target_skeleton.get_bone_global_pose(bone_idx)
-		var end_pose := target_skeleton.get_bone_global_pose(next_idx)
-		var bone_length := start_pose.origin.distance_to(end_pose.origin)
+		# Build each physical bone in the same local-space convention as Godot's
+		# Create Physical Skeleton editor command (model-space units from the GLB).
+		var child_rest := target_skeleton.get_bone_rest(next_idx)
+		var bone_length := child_rest.origin.length()
 		if bone_length < 0.04:
 			continue
+		var half_height := bone_length * 0.5
+		var radius := minf(float(defn.radius), half_height * 0.2)
 		var physical := PhysicalBone3D.new()
 		physical.name = "Physical Bone " + String(defn.bone).replace("swat:", "")
 		physical.mass = 1.2 if String(defn.bone).contains("Hips") else 0.7
 		physical.friction = 0.8
 		physical.bounce = 0.0
-		physical.linear_damp = 0.25
-		physical.angular_damp = 0.8
-		# Put ragdoll parts on their own layer and collide only with the world.
-		# This prevents overlapping joint capsules from launching the mannequin.
+		physical.linear_damp = 2.0
+		physical.angular_damp = 3.0
+		# Only hit world layer 1; no overlapping ragdoll capsules collide with each other.
 		physical.collision_layer = 2
 		physical.collision_mask = 1
 		ragdoll_simulator.add_child(physical)
-		# Assign after entering the simulator so Godot can resolve the bone index.
 		physical.set("bone_name", target_skeleton.get_bone_name(bone_idx))
 		physical.joint_type = int(defn.joint)
-		physical.transform = start_pose
+		var up := Vector3.UP
+		if up.cross(child_rest.origin).is_zero_approx(): up = Vector3.FORWARD
+		var body_basis := Basis.looking_at(child_rest.origin, up)
+		physical.body_offset = Transform3D(body_basis, body_basis * Vector3(0.0, 0.0, -half_height))
+		physical.joint_offset = Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, half_height))
 		var collision := CollisionShape3D.new()
 		var capsule := CapsuleShape3D.new()
-		capsule.radius = float(defn.radius)
-		capsule.height = maxf(bone_length, float(defn.radius) * 2.2)
+		capsule.radius = radius
+		capsule.height = maxf(bone_length, radius * 2.2)
 		collision.shape = capsule
-		collision.position.y = bone_length * 0.5
+		var capsule_basis := Basis(Vector3(1,0,0), Vector3(0,0,-1), Vector3(0,1,0))
+		collision.transform = Transform3D(capsule_basis, Vector3.ZERO)
 		physical.add_child(collision)
 		ragdoll_bones.append(physical)
 		if physical.get_bone_id() < 0:
