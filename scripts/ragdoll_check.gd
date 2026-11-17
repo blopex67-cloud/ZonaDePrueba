@@ -57,9 +57,17 @@ func _run_check() -> void:
 			printerr("RAGDOLL CHECK FAILED: collision capsule too small/missing on ", body.name, " child_count=", bone_body.get_child_count())
 			quit(1)
 			return
+	var pelvis: PhysicalBone3D = bodies[0] as PhysicalBone3D
+	var initial_pelvis_y := pelvis.global_position.y
 	game.call("_kill_target", Vector3(0,1,-4), Vector3(0,0,1))
 	for frame in range(30):
 		await physics_frame
+	var pelvis_delta_y := pelvis.global_position.y - initial_pelvis_y
+	print("RAGDOLL VERTICAL DELTA: ", pelvis_delta_y)
+	if absf(pelvis_delta_y) > 3.5:
+		printerr("RAGDOLL CHECK FAILED: mannequin launched out of position, delta_y=", pelvis_delta_y)
+		quit(1)
+		return
 	if not is_instance_valid(game.get("target")):
 		printerr("RAGDOLL CHECK FAILED: target node disappeared after death")
 		quit(1)

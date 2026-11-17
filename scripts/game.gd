@@ -259,6 +259,11 @@ func _build_target_ragdoll() -> void:
 		ragdoll_bones.append(physical)
 		if physical.get_bone_id() < 0:
 			push_warning("No se pudo enlazar hueso físico: %s / %s" % [physical.name, target_skeleton.get_bone_name(bone_idx)])
+	# Los cuerpos del propio muñeco no deben golpearse entre sí: sus cápsulas
+	# solapan intencionadamente en las articulaciones y si chocan lo catapultan.
+	for i in range(ragdoll_bones.size()):
+		for j in range(i + 1, ragdoll_bones.size()):
+			ragdoll_bones[i].add_collision_exception_with(ragdoll_bones[j])
 	if ragdoll_bones.size() < 10:
 		var available: PackedStringArray = []
 		for i in range(target_skeleton.get_bone_count()): available.append(target_skeleton.get_bone_name(i))
@@ -573,10 +578,8 @@ func _kill_target(point: Vector3, normal: Vector3) -> void:
 				closest_distance = distance
 				closest = physical
 		var away := (closest.global_position - point).normalized()
-		closest.apply_impulse(away * 0.08 + normal * 0.04, point - closest.global_position)
-		for physical in ragdoll_bones:
-			if physical != closest:
-				physical.apply_central_impulse(Vector3.ZERO)
+		closest.apply_impulse(away * 0.015 + normal * 0.01, point - closest.global_position)
+
 
 
 func _reload() -> void:
