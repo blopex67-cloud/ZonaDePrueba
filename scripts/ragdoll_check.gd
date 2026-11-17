@@ -30,10 +30,10 @@ func _run_check() -> void:
 		print("RAGDOLL BONE: ", body.name, " bone_name=", pb.get("bone_name"), " id=", pb.get_bone_id())
 	if bodies.size() < 10:
 		printerr("RAGDOLL CHECK FAILED: too few physical bones: ", bodies.size())
-		var skeleton := game.get("target_skeleton") as Skeleton3D
-		if skeleton:
+		var missing_skeleton := game.get("target_skeleton") as Skeleton3D
+		if missing_skeleton:
 			var names: PackedStringArray = []
-			for i in range(skeleton.get_bone_count()): names.append(skeleton.get_bone_name(i))
+			for i in range(missing_skeleton.get_bone_count()): names.append(missing_skeleton.get_bone_name(i))
 			printerr("RAGDOLL BONE NAMES: ", ", ".join(names))
 		quit(1)
 		return

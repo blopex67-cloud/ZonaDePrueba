@@ -257,8 +257,8 @@ func _build_target_ragdoll() -> void:
 		collision.position.y = bone_length * 0.5
 		physical.add_child(collision)
 		ragdoll_bones.append(physical)
-	if physical.get_bone_id() < 0:
-		push_warning("No se pudo enlazar hueso físico: %s / %s" % [physical.name, target_skeleton.get_bone_name(bone_idx)])
+		if physical.get_bone_id() < 0:
+			push_warning("No se pudo enlazar hueso físico: %s / %s" % [physical.name, target_skeleton.get_bone_name(bone_idx)])
 	if ragdoll_bones.size() < 10:
 		var available: PackedStringArray = []
 		for i in range(target_skeleton.get_bone_count()): available.append(target_skeleton.get_bone_name(i))
