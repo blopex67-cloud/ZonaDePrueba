@@ -233,6 +233,8 @@ func _build_hud() -> void:
 	add_child(hud)
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# HUD de fondo no debe consumir los gestos táctiles de movimiento o cámara.
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(root)
 	var top := _panel(root,Vector2(22,18),Vector2(330,76),Color(0.02,0.035,0.05,0.78))
 	var title := _label(top,"ZONA DE PRUEBA",20,Color(0.86,0.92,0.96),Vector2(15,9),Vector2(280,26))
@@ -302,6 +304,7 @@ func _build_hud() -> void:
 func _panel(parent: Node, pos: Vector2, size: Vector2, color: Color) -> Panel:
 	var p := Panel.new()
 	p.position=pos; p.size=size
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
 	style.bg_color=color
 	style.corner_radius_top_left=12; style.corner_radius_top_right=12
@@ -313,6 +316,7 @@ func _panel(parent: Node, pos: Vector2, size: Vector2, color: Color) -> Panel:
 func _label(parent: Node, text: String, font_size: int, color: Color, pos: Vector2, size: Vector2) -> Label:
 	var l := Label.new()
 	l.text=text; l.position=pos; l.size=size
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.add_theme_font_size_override("font_size",font_size)
 	l.add_theme_color_override("font_color",color)
 	parent.add_child(l)
